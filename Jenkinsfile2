@@ -1,0 +1,41 @@
+pipeline {
+    agent any
+
+    stages {
+        stage('Git Checkout') {
+            steps {
+                git branch: 'main', url: 'https://github.com/kushalsamota/docker.git'
+            }
+        }
+        stage('Docker Build') {
+            steps {
+                sh 'sudo docker build -t docker.io/kushalsamota/apache:v1 .'
+            }
+        }
+        stage('Docker login') {
+            steps {
+                sh 'sudo docker login -u ${dockerhub_username} -p ${dockerhub_password}'
+            }
+        }
+        stage('Docker Push') {
+            steps {
+                sh 'sudo docker push kushalsamota/apache:v1'
+            }
+        }
+        stage('Remove Existing Containers') {
+            steps {
+               sh 'sudo ssh -i /root/nfs.pem -o StrictHostKeyChecking=no centos@13.235.23.21 sudo docker rm -f apache'
+            }
+        }
+        stage('Docker Run') {
+            steps {
+                sh 'sudo ssh -i /root/nfs.pem -o StrictHostKeyChecking=no centos@13.235.23.21 sudo docker run -itd --name apache -p 80:80 kushalsamota/apache:v1'
+            }
+        }
+        stage('Check the status') {
+            steps {
+                sh 'sudo ssh -i /root/nfs.pem -o StrictHostKeyChecking=no centos@13.235.23.21 sudo docker ps -a'
+            }
+        }
+    }
+}
